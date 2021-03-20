@@ -1,6 +1,5 @@
-#!/bin/bash
-PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
-export PATH
+#!/usr/bin/env bash
+export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 
 # Check if user is root
 if [ $(id -u) != "0" ]; then
@@ -11,7 +10,7 @@ fi
 cur_dir=$(pwd)
 Stack=$1
 
-LNMP_Ver='1.4'
+LNMP_Ver='1.8'
 
 . lnmp.conf
 . include/main.sh
@@ -30,17 +29,6 @@ echo "+------------------------------------------------------------------------+
 echo "|           For more information please visit https://lnmp.org           |"
 echo "+------------------------------------------------------------------------+"
 
-Dele_Iptables_Rules()
-{
-    /sbin/iptables -D INPUT -i lo -j ACCEPT
-    /sbin/iptables -D INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-    /sbin/iptables -D INPUT -p tcp --dport 22 -j ACCEPT
-    /sbin/iptables -D INPUT -p tcp --dport 80 -j ACCEPT
-    /sbin/iptables -D INPUT -p tcp --dport 443 -j ACCEPT
-    /sbin/iptables -D INPUT -p tcp --dport 3306 -j DROP
-    /sbin/iptables -D INPUT -p icmp -m icmp --icmp-type 8 -j ACCEPT
-}
-
 Sleep_Sec()
 {
     seconds=$1
@@ -58,9 +46,6 @@ Uninstall_LNMP()
     echo "Stoping LNMP..."
     lnmp kill
     lnmp stop
-
-    echo "Deleting iptables rules..."
-    Dele_Iptables_Rules
 
     Remove_StartUp nginx
     Remove_StartUp php-fpm
@@ -100,6 +85,9 @@ Uninstall_LNMP()
     if [ -s /usr/local/acme.sh/acme.sh ]; then
         /usr/local/acme.sh/acme.sh --uninstall
         rm -rf /usr/local/acme.sh
+        if crontab -l|grep -v "/usr/local/acme.sh/upgrade.sh"; then
+            crontab -l|grep -v "/usr/local/acme.sh/upgrade.sh" | crontab -
+        fi
     fi
 
     rm -f /etc/init.d/nginx
@@ -113,9 +101,6 @@ Uninstall_LNMPA()
     echo "Stoping LNMPA..."
     lnmp kill
     lnmp stop
-
-    echo "Deleting iptables rules..."
-    Dele_Iptables_Rules
     
     Remove_StartUp nginx
     Remove_StartUp httpd
@@ -143,6 +128,9 @@ Uninstall_LNMPA()
     if [ -s /usr/local/acme.sh/acme.sh ]; then
         /usr/local/acme.sh/acme.sh --uninstall
         rm -rf /usr/local/acme.sh
+        if crontab -l|grep -v "/usr/local/acme.sh/upgrade.sh"; then
+            crontab -l|grep -v "/usr/local/acme.sh/upgrade.sh" | crontab -
+        fi
     fi
 
     rm -f /etc/init.d/nginx
@@ -156,9 +144,6 @@ Uninstall_LAMP()
     echo "Stoping LAMP..."
     lnmp kill
     lnmp stop
-
-    echo "Deleting iptables rules..."
-    Dele_Iptables_Rules
 
     Remove_StartUp httpd
     if [ ${DB_Name} != "None" ]; then
@@ -184,6 +169,9 @@ Uninstall_LAMP()
     if [ -s /usr/local/acme.sh/acme.sh ]; then
         /usr/local/acme.sh/acme.sh --uninstall
         rm -rf /usr/local/acme.sh
+        if crontab -l|grep -v "/usr/local/acme.sh/upgrade.sh"; then
+            crontab -l|grep -v "/usr/local/acme.sh/upgrade.sh" | crontab -
+        fi
     fi
 
     rm -f /etc/my.cnf

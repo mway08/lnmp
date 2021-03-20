@@ -1,6 +1,5 @@
-#!/bin/bash
-PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
-export PATH
+#!/usr/bin/env bash
+export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 
 # Check if user is root
 if [ $(id -u) != "0" ]; then
@@ -16,7 +15,7 @@ else
     Stack=$1
 fi
 
-LNMP_Ver='1.5'
+LNMP_Ver='1.8'
 . lnmp.conf
 . include/main.sh
 . include/init.sh
@@ -62,13 +61,20 @@ Init_Install()
     Get_Dist_Version
     Print_Sys_Info
     Check_Hosts
-    Check_Mirror
+    Check_CMPT
+    if [ "${CheckMirror}" != "n" ]; then
+        Check_Mirror
+    fi
     if [ "${DISTRO}" = "RHEL" ]; then
         RHEL_Modify_Source
     fi
     if [ "${DISTRO}" = "Ubuntu" ]; then
         Ubuntu_Modify_Source
     fi
+    if [ "${DISTRO}" = "CentOS" ]; then
+        CentOS6_Modify_Source
+    fi
+    Add_Swap
     Set_Timezone
     if [ "$PM" = "yum" ]; then
         CentOS_InstallNTP
@@ -98,7 +104,6 @@ Init_Install()
         CentOS_Lib_Opt
     elif [ "$PM" = "apt" ]; then
         Deb_Lib_Opt
-        Deb_Check_MySQL
     fi
     if [ "${DBSelect}" = "1" ]; then
         Install_MySQL_51
@@ -113,13 +118,16 @@ Init_Install()
     elif [ "${DBSelect}" = "6" ]; then
         Install_MariaDB_5
     elif [ "${DBSelect}" = "7" ]; then
-        Install_MariaDB_10
-    elif [ "${DBSelect}" = "8" ]; then
         Install_MariaDB_101
-    elif [ "${DBSelect}" = "9" ]; then
+    elif [ "${DBSelect}" = "8" ]; then
         Install_MariaDB_102
+    elif [ "${DBSelect}" = "9" ]; then
+        Install_MariaDB_103
+    elif [ "${DBSelect}" = "10" ]; then
+        Install_MariaDB_104
     fi
     TempMycnf_Clean
+    Clean_DB_Src_Dir
     Check_PHP_Option
 }
 
@@ -141,7 +149,14 @@ Install_PHP()
         Install_PHP_71
     elif [ "${PHPSelect}" = "8" ]; then
         Install_PHP_72
+    elif [ "${PHPSelect}" = "9" ]; then
+        Install_PHP_73
+    elif [ "${PHPSelect}" = "10" ]; then
+        Install_PHP_74
+    elif [ "${PHPSelect}" = "11" ]; then
+        Install_PHP_80
     fi
+    Clean_PHP_Src_Dir
 }
 
 LNMP_Stack()

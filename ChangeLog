@@ -1,5 +1,63 @@
 更新记录
 
+LNMP 1.8
+
+增加PHP 8.0支持；
+增加Oracle Linux支持；
+优化时间同步;
+更新诸多软件版本；
+其他一些功能优化及调整......
+
+LNMP 1.7
+
+增加PHP 7.4支持；
+增加MariaDB 10.4支持；
+增加systemd service脚本；
+增加phpmyadmin 5.0；
+增加多PHP版本升级工具 ./upgrade.sh mphp，只支持7.2.x-7.2.x类似小版本升级，大版本直接新装即可；
+移除MariaDB 10.0；
+优化lnmp管理脚本；
+优化数据库root密码重置工具；
+优化系统版本获取脚本；
+优化redis安装脚本；
+优化fail2ban安装脚本；
+优化nginx安装、升级脚本；
+完善CentOS8、Ubuntu20、Deepin20、Fedora等新版本的支持；
+完善MySQL升级时增加旧版本下载镜像；
+调整php7 memcached使用稳定版；
+修复lamp模式下ssl chain添加的bug；
+更新诸多软件版本；
+其他一些功能优化及调整......
+
+LNMP 1.6
+
+增加PHP 7.3支持；
+增加MariaDB 10.3支持；
+增加Nginx/Apache TLS 1.3支持；
+增加使用DNS API方式只创建SSL证书不添加网站，命令lnmp onlyssl；
+增加Fedora 30、Ubuntu 19.04、RHEL 8等新版本的支持；
+增加nginx、apache等一些例子，并移至conf/example目录下；
+增加在低于2048MB内存是增加2GB SWAP或低于1024MB时增加1GB SWAP的选项；
+增加反向代理配置例子文件 nginx-reverse-proxy-example.conf；
+增加只安装nginx模式增加拷贝lnmp管理工具；
+增加 RHELRepo=local 参数，RHEL安装时使用RHEL本地源，不设置源为163 centos源；
+增加 CheckMirror=n 参考，安装时不检查下载镜像，方便无网络安装；
+优化不安装数据库时的处理流程；
+优化acme.sh规则可能不生效的情况；
+优化nginx系统满足条件是启用reuseport；
+优化程序代码目录清理；
+优化重写nginx管理脚本；
+优化安装数据库时的内存判断，放宽内存限制；
+修复新版深度Deepin 15.8桌面版问题；
+修复新版Fedora 29下问题；
+调整mysql使用带boost源码，同时支持不带boost安装方式；
+调整卸载时不删除安装时添加的iptables规则；
+调整fileinfo安装选项，内存满足时自动安装(可关闭)；
+升级Nginx至1.16.0；
+升级各程序版本；
+更新诸多软件版本；
+其他一些功能优化及调整......
+
 LNMP 1.5
 
 增加PHP 7.2支持；

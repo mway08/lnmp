@@ -1,6 +1,5 @@
-#!/bin/bash
-PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
-export PATH
+#!/usr/bin/env bash
+export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 
 # Check if user is root
 if [ $(id -u) != "0" ]; then
@@ -13,10 +12,47 @@ isSSL=$1
 
 . lnmp.conf
 . include/main.sh
+. include/init.sh
 
 Get_Dist_Name
 Check_Stack
 Check_DB
+
+Upgrade_Dependent()
+{
+    if [ "$PM" = "yum" ]; then
+        Echo_Blue "[+] Yum installing dependent packages..."
+        Get_Dist_Version
+        for packages in patch wget crontabs unzip tar ca-certificates net-tools libc-client-devel psmisc libXpm-devel git-core c-ares-devel libicu-devel libxslt libxslt-devel xz expat-devel bzip2 bzip2-devel libaio-devel rpcgen libtirpc-devel perl python-devel cyrus-sasl-devel sqlite-devel oniguruma-devel re2c;
+        do yum -y install $packages; done
+        yum -y update nss
+
+        if [ "${DISTRO}" = "CentOS" ] && echo "${CentOS_Version}" | grep -Eqi "^8"; then
+            Check_PowerTools
+            dnf --enablerepo=${repo_id} install rpcgen re2c -y
+            dnf --enablerepo=${repo_id} install oniguruma-devel -y
+        fi
+
+        if echo "${CentOS_Version}" | grep -Eqi "^7" || echo "${RHEL_Version}" | grep -Eqi "^7"; then
+            yum -y install epel-release
+            if [ "${country}" = "CN" ]; then
+                sed -i "s@^#baseurl=http://download.fedoraproject.org/pub@baseurl=http://mirrors.aliyun.com@g" /etc/yum.repos.d/epel*.repo
+                sed -i "s@^metalink@#metalink@g" /etc/yum.repos.d/epel*.repo
+            fi
+            yum -y install oniguruma oniguruma-devel
+            if [ "${CheckMirror}" = "n" ]; then
+                cd ${cur_dir}/src/
+                yum -y install ./oniguruma-6.8.2-1.el7.x86_64.rpm
+                yum -y install ./oniguruma-devel-6.8.2-1.el7.x86_64.rpm
+            fi
+        fi
+    elif [ "$PM" = "apt" ]; then
+        Echo_Blue "[+] apt-get installing dependent packages..."
+        apt-get update -y
+        for packages in debian-keyring debian-archive-keyring build-essential bison libkrb5-dev libcurl3-gnutls libcurl4-gnutls-dev libcurl4-openssl-dev libcap-dev ca-certificates libc-client2007e-dev psmisc patch git libc-ares-dev libicu-dev e2fsprogs libxslt1.1 libxslt1-dev libc-client-dev xz-utils libexpat1-dev bzip2 libbz2-dev libaio-dev libtirpc-dev python-dev libsqlite3-dev libonig-dev;
+        do apt-get --no-install-recommends install -y $packages; done
+    fi
+}
 
 if [ "${isSSL}" == "ssl" ]; then
     echo "+--------------------------------------------------+"
@@ -89,6 +125,14 @@ if [ "${isSSL}" == "ssl" ]; then
             rm -f latest.tar.gz
             rm -rf acme.sh-*
             sed -i 's/cat "\$CERT_PATH"$/#cat "\$CERT_PATH"/g' /usr/local/acme.sh/acme.sh
+            if command -v yum >/dev/null 2>&1; then
+                yum -y update nss
+                service crond restart
+                chkconfig crond on
+            elif command -v apt-get >/dev/null 2>&1; then
+                /etc/init.d/cron restart
+                update-rc.d cron defaults
+            fi
         fi
 
         . "/usr/local/acme.sh/acme.sh.env"
@@ -184,6 +228,15 @@ if [ "${isSSL}" == "ssl" ]; then
             rm -f latest.tar.gz
             rm -rf acme.sh-*
             sed -i 's/cat "\$CERT_PATH"$/#cat "\$CERT_PATH"/g' /usr/local/acme.sh/acme.sh
+            if command -v yum >/dev/null 2>&1; then
+                yum -y update nss
+                yum -y install ca-certificates
+                service crond restart
+                chkconfig crond on
+            elif command -v apt-get >/dev/null 2>&1; then
+                /etc/init.d/cron restart
+                update-rc.d cron defaults
+            fi
         fi
 
         . "/usr/local/acme.sh/acme.sh.env"
@@ -221,7 +274,7 @@ if [ "${isSSL}" == "ssl" ]; then
     fi
 else
     echo "+--------------------------------------------------+"
-    echo "|  A tool to upgrade lnmp manager from 1.x to 1.5  |"
+    echo "|  A tool to upgrade lnmp manager from 1.x to 1.8  |"
     echo "+--------------------------------------------------+"
     echo "|For more information please visit https://lnmp.org|"
     echo "+--------------------------------------------------+"
@@ -230,15 +283,7 @@ else
         Echo_Red "Can't get stack info."
         exit
     elif [ "${Get_Stack}" == "lnmp" ]; then
-        if [ "$PM" = "yum" ]; then
-            Echo_Blue "[+] Yum installing dependent packages..."
-            for packages in patch wget crontabs unzip tar ca-certificates net-tools libc-client-devel psmisc libXpm-devel git-core c-ares-devel libicu-devel libxslt libxslt-devel xz expat-devel bzip2 bzip2-devel libaio-devel;
-            do yum -y install $packages; done
-        elif [ "$PM" = "apt" ]; then
-            apt-get update -y
-            for packages in debian-keyring debian-archive-keyring build-essential bison libkrb5-dev libcurl3-gnutls libcurl4-gnutls-dev libcurl4-openssl-dev libcap-dev ca-certificates libc-client2007e-dev psmisc patch git libc-ares-dev libicu-dev e2fsprogs libxslt libxslt1-dev libc-client-dev xz-utils libexpat1-dev bzip2 libbz2-dev libaio-dev;
-            do apt-get --no-install-recommends install -y $packages; done
-        fi
+        Upgrade_Dependent
         echo "Copy lnmp manager..."
         sleep 1
         \cp ${cur_dir}/conf/lnmp /bin/lnmp
@@ -261,6 +306,7 @@ else
             mkdir /usr/local/nginx/conf/vhost
         fi
     elif [ "${Get_Stack}" == "lnmpa" ]; then
+        Upgrade_Dependent
         echo "Copy lnmp manager..."
         sleep 1
         \cp ${cur_dir}/conf/lnmpa /bin/lnmp
@@ -282,6 +328,7 @@ else
             mkdir /usr/local/nginx/conf/vhost
         fi
     elif [ "${Get_Stack}" == "lamp" ]; then
+        Upgrade_Dependent
         echo "Copy configure files..."
         sleep 1
         \cp ${cur_dir}/conf/lamp /bin/lnmp

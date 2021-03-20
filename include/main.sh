@@ -1,15 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-DB_Info=('MySQL 5.1.73' 'MySQL 5.5.60' 'MySQL 5.6.40' 'MySQL 5.7.22' 'MySQL 8.0.11' 'MariaDB 5.5.60' 'MariaDB 10.0.35' 'MariaDB 10.1.33' 'MariaDB 10.2.14')
-PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.36' 'PHP 7.0.30' 'PHP 7.1.18' 'PHP 7.2.6')
-Apache_Info=('Apache 2.2.34' 'Apache 2.4.33')
+DB_Info=('MySQL 5.1.73' 'MySQL 5.5.62' 'MySQL 5.6.48' 'MySQL 5.7.30' 'MySQL 8.0.20' 'MariaDB 5.5.68' 'MariaDB 10.1.45' 'MariaDB 10.2.32' 'MariaDB 10.3.23' 'MariaDB 10.4.13')
+PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.40' 'PHP 7.0.33' 'PHP 7.1.33' 'PHP 7.2.34' 'PHP 7.3.27' 'PHP 7.4.15' 'PHP 8.0.2')
+Apache_Info=('Apache 2.2.34' 'Apache 2.4.46')
 
 Database_Selection()
 {
 #which MySQL Version do you want to install?
     if [ -z ${DBSelect} ]; then
         DBSelect="2"
-        Echo_Yellow "You have 10 options for your DataBase install."
+        Echo_Yellow "You have 11 options for your DataBase install."
         echo "1: Install ${DB_Info[0]}"
         echo "2: Install ${DB_Info[1]} (Default)"
         echo "3: Install ${DB_Info[2]}"
@@ -19,8 +19,9 @@ Database_Selection()
         echo "7: Install ${DB_Info[6]}"
         echo "8: Install ${DB_Info[7]}"
         echo "9: Install ${DB_Info[8]}"
+        echo "10: Install ${DB_Info[9]}"
         echo "0: DO NOT Install MySQL/MariaDB"
-        read -p "Enter your choice (1, 2, 3, 4, 5, 6, 7, 8, 9 or 0): " DBSelect
+        read -p "Enter your choice (1, 2, 3, 4, 5, 6, 7, 8, 9, 10 or 0): " DBSelect
     fi
 
     case "${DBSelect}" in
@@ -51,6 +52,9 @@ Database_Selection()
     9)
         echo "You will install ${DB_Info[8]}"
         ;;
+    10)
+        echo "You will install ${DB_Info[9]}"
+        ;;
     0)
         echo "Do not install MySQL/MariaDB!"
         ;;
@@ -59,12 +63,12 @@ Database_Selection()
         DBSelect="2"
     esac
 
-    if [[ "${DBSelect}" =~ ^[345789]$ ]] && [ `free -m | grep Mem | awk '{print  $2}'` -le 1024 ]; then
-        echo "Memory less than 1GB, can't install MySQL 5.6+ or MairaDB 10+!"
+    if [[ "${DBSelect}" =~ ^[59]|10$ ]] && [ `free -m | grep Mem | awk '{print  $2}'` -le 1024 ]; then
+        echo "Memory less than 1GB, can't install MySQL 8.0 or MairaDB 10.3+!"
         exit 1
     fi
 
-    if [[ "${DBSelect}" =~ ^[6789]$ ]]; then
+    if [[ "${DBSelect}" =~ ^[6789]|10$ ]]; then
         MySQL_Bin="/usr/local/mariadb/bin/mysql"
         MySQL_Config="/usr/local/mariadb/bin/mysql_config"
         MySQL_Dir="/usr/local/mariadb"
@@ -120,7 +124,7 @@ PHP_Selection()
         echo "==========================="
 
         PHPSelect="3"
-        Echo_Yellow "You have 8 options for your PHP install."
+        Echo_Yellow "You have 9 options for your PHP install."
         echo "1: Install ${PHP_Info[0]}"
         echo "2: Install ${PHP_Info[1]}"
         echo "3: Install ${PHP_Info[2]}"
@@ -129,7 +133,10 @@ PHP_Selection()
         echo "6: Install ${PHP_Info[5]}"
         echo "7: Install ${PHP_Info[6]}"
         echo "8: Install ${PHP_Info[7]}"
-        read -p "Enter your choice (1, 2, 3, 4, 5, 6, 7 or 8): " PHPSelect
+        echo "9: Install ${PHP_Info[8]}"
+        echo "10: Install ${PHP_Info[9]}"
+        echo "11: Install ${PHP_Info[10]}"
+        read -p "Enter your choice (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11): " PHPSelect
     fi
 
     case "${PHPSelect}" in
@@ -160,6 +167,15 @@ PHP_Selection()
         ;;
     8)
         echo "You will install ${PHP_Info[7]}"
+        ;;
+    9)
+        echo "You will install ${PHP_Info[8]}"
+        ;;
+    10)
+        echo "You will install ${PHP_Info[9]}"
+        ;;
+    11)
+        echo "You will install ${PHP_Info[10]}"
         ;;
     *)
         echo "No input,You will install ${PHP_Info[4]}"
@@ -264,17 +280,17 @@ Apache_Selection()
 
 Kill_PM()
 {
-    if ps aux | grep "yum" | grep -qv "grep"; then
-        if [ -s /usr/bin/killall ]; then
-            killall yum
-        else
-            kill `pidof yum`
+    if ps aux | grep -E "yum|dnf" | grep -qv "grep"; then
+        kill -9 $(ps -ef|grep -E "yum|dnf"|grep -v grep|awk '{print $2}')
+        if [ -s /var/run/yum.pid ]; then
+            rm -f /var/run/yum.pid
         fi
-    elif ps aux | grep "apt-get" | grep -qv "grep"; then
-        if [ -s /usr/bin/killall ]; then
-            killall apt-get
-        else
-            kill `pidof apt-get`
+    elif ps aux | grep -E "apt-get|dpkg|apt" | grep -qv "grep"; then
+        kill -9 $(ps -ef|grep -E "apt-get|apt|dpkg"|grep -v grep|awk '{print $2}')
+        if [[ -s /var/lib/dpkg/lock-frontend || -s /var/lib/dpkg/lock ]]; then
+            rm -f /var/lib/dpkg/lock-frontend
+            rm -f /var/lib/dpkg/lock
+            dpkg --configure -a
         fi
     fi
 }
@@ -316,15 +332,26 @@ Install_LSB()
 
 Get_Dist_Version()
 {
-    if [ -s /usr/bin/python3 ]; then
-        eval ${DISTRO}_Version=`/usr/bin/python3 -c 'import platform; print(platform.linux_distribution()[1])'`
-    elif [ -s /usr/bin/python2 ]; then
-        eval ${DISTRO}_Version=`/usr/bin/python2 -c 'import platform; print platform.linux_distribution()[1]'`
+    if command -v lsb_release >/dev/null 2>&1; then
+        DISTRO_Version=$(lsb_release -sr)
+    elif [ -f /etc/lsb-release ]; then
+        . /etc/lsb-release
+        DISTRO_Version="$DISTRIB_RELEASE"
+    elif [ -f /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO_Version="$VERSION_ID"
     fi
-    if [ $? -ne 0 ]; then
-        Install_LSB
-        eval ${DISTRO}_Version=`lsb_release -rs`
+    if [[ "${DISTRO}" = "" || "${DISTRO_Version}" = "" ]]; then
+        if command -v python2 >/dev/null 2>&1; then
+            DISTRO_Version=$(python2 -c 'import platform; print platform.linux_distribution()[1]')
+        elif command -v python3 >/dev/null 2>&1; then
+            DISTRO_Version=$(python3 -c 'import platform; print(platform.linux_distribution()[1])')
+        else
+            Install_LSB
+            DISTRO_Version=`lsb_release -rs`
+        fi
     fi
+    printf -v "${DISTRO}_Version" '%s' "${DISTRO_Version}"
 }
 
 Get_Dist_Name()
@@ -332,17 +359,20 @@ Get_Dist_Name()
     if grep -Eqi "CentOS" /etc/issue || grep -Eq "CentOS" /etc/*-release; then
         DISTRO='CentOS'
         PM='yum'
-    elif grep -Eqi "Red Hat Enterprise Linux Server" /etc/issue || grep -Eq "Red Hat Enterprise Linux Server" /etc/*-release; then
-        DISTRO='RHEL'
-        PM='yum'
-    elif grep -Eqi "Aliyun" /etc/issue || grep -Eq "Aliyun" /etc/*-release; then
+    elif grep -Eqi "Aliyun" /etc/issue || grep -Eq "Aliyun Linux" /etc/*-release; then
         DISTRO='Aliyun'
+        PM='yum'
+    elif grep -Eqi "Amazon Linux" /etc/issue || grep -Eq "Amazon Linux" /etc/*-release; then
+        DISTRO='Amazon'
         PM='yum'
     elif grep -Eqi "Fedora" /etc/issue || grep -Eq "Fedora" /etc/*-release; then
         DISTRO='Fedora'
         PM='yum'
-    elif grep -Eqi "Amazon Linux" /etc/issue || grep -Eq "Amazon Linux" /etc/*-release; then
-        DISTRO='Amazon'
+    elif grep -Eqi "Oracle Linux" /etc/issue || grep -Eq "Oracle Linux" /etc/*-release; then
+        DISTRO='Oracle'
+        PM='yum'
+    elif grep -Eqi "Red Hat Enterprise Linux" /etc/issue || grep -Eq "Red Hat Enterprise Linux" /etc/*-release; then
+        DISTRO='RHEL'
         PM='yum'
     elif grep -Eqi "Debian" /etc/issue || grep -Eq "Debian" /etc/*-release; then
         DISTRO='Debian'
@@ -381,6 +411,9 @@ Get_RHEL_Version()
         elif grep -Eqi "release 7." /etc/redhat-release; then
             echo "Current Version: RHEL Ver 7"
             RHEL_Ver='7'
+        elif grep -Eqi "release 8." /etc/redhat-release; then
+            echo "Current Version: RHEL Ver 8"
+            RHEL_Ver='8'
         fi
     fi
 }
@@ -421,8 +454,10 @@ Tar_Cd()
     [[ -d "${DirName}" ]] && rm -rf ${DirName}
     echo "Uncompress ${FileName}..."
     tar zxf ${FileName}
-    echo "cd ${DirName}..."
-    cd ${DirName}
+    if [ -n "${DirName}" ]; then
+        echo "cd ${DirName}..."
+        cd ${DirName}
+    fi
 }
 
 Tarj_Cd()
@@ -433,8 +468,24 @@ Tarj_Cd()
     [[ -d "${DirName}" ]] && rm -rf ${DirName}
     echo "Uncompress ${FileName}..."
     tar jxf ${FileName}
-    echo "cd ${DirName}..."
-    cd ${DirName}
+    if [ -n "${DirName}" ]; then
+        echo "cd ${DirName}..."
+        cd ${DirName}
+    fi
+}
+
+TarJ_Cd()
+{
+    local FileName=$1
+    local DirName=$2
+    cd ${cur_dir}/src
+    [[ -d "${DirName}" ]] && rm -rf ${DirName}
+    echo "Uncompress ${FileName}..."
+    tar Jxf ${FileName}
+    if [ -n "${DirName}" ]; then
+        echo "cd ${DirName}..."
+        cd ${DirName}
+    fi
 }
 
 Check_LNMPConf()
@@ -462,7 +513,7 @@ Print_APP_Ver()
 
     if [[ "${DBSelect}" =~ ^[12345]$ ]]; then
         echo "${Mysql_Ver}"
-    elif [[ "${DBSelect}" =~ ^[6789]$ ]]; then
+    elif [[ "${DBSelect}" =~ ^[6789]|10$ ]]; then
         echo "${Mariadb_Ver}"
     elif [ "${DBSelect}" = "0" ]; then
         echo "Do not install MySQL/MariaDB!"
@@ -492,7 +543,7 @@ Print_APP_Ver()
     fi
     if [[ "${DBSelect}" =~ ^[12345]$ ]]; then
         echo "Database Directory: ${MySQL_Data_Dir}"
-    elif [[ "${DBSelect}" =~ ^[6789]$ ]]; then
+    elif [[ "${DBSelect}" =~ ^[6789]|10$ ]]; then
         echo "Database Directory: ${MariaDB_Data_Dir}"
     elif [ "${DBSelect}" = "0" ]; then
         echo "Do not install MySQL/MariaDB!"
@@ -502,6 +553,7 @@ Print_APP_Ver()
 
 Print_Sys_Info()
 {
+    echo "LNMP Version: ${LNMP_Ver}"
     eval echo "${DISTRO} \${${DISTRO}_Version}"
     cat /etc/issue
     cat /etc/*-release
@@ -509,17 +561,24 @@ Print_Sys_Info()
     MemTotal=`free -m | grep Mem | awk '{print  $2}'`
     echo "Memory is: ${MemTotal} MB "
     df -h
+    openssl version
+    Check_WSL
 }
 
 StartUp()
 {
     init_name=$1
     echo "Add ${init_name} service at system startup..."
-    if [ "$PM" = "yum" ]; then
-        chkconfig --add ${init_name}
-        chkconfig ${init_name} on
-    elif [ "$PM" = "apt" ]; then
-        update-rc.d -f ${init_name} defaults
+    if [ "${isWSL}" = "n" ] && command -v systemctl >/dev/null 2>&1 && [[ -s /etc/systemd/system/${init_name}.service || -s /lib/systemd/system/${init_name}.service || -s /usr/lib/systemd/system/${init_name}.service ]]; then
+        systemctl daemon-reload
+        systemctl enable ${init_name}.service
+    else
+        if [ "$PM" = "yum" ]; then
+            chkconfig --add ${init_name}
+            chkconfig ${init_name} on
+        elif [ "$PM" = "apt" ]; then
+            update-rc.d -f ${init_name} defaults
+        fi
     fi
 }
 
@@ -527,17 +586,21 @@ Remove_StartUp()
 {
     init_name=$1
     echo "Removing ${init_name} service at system startup..."
-    if [ "$PM" = "yum" ]; then
-        chkconfig ${init_name} off
-        chkconfig --del ${init_name}
-    elif [ "$PM" = "apt" ]; then
-        update-rc.d -f ${init_name} remove
+    if [ "${isWSL}" = "n" ] && command -v systemctl >/dev/null 2>&1 && [[ -s /etc/systemd/system/${init_name}.service || -s /lib/systemd/system/${init_name}.service || -s /usr/lib/systemd/system/${init_name}.service ]]; then
+        systemctl disable ${init_name}.service
+    else
+        if [ "$PM" = "yum" ]; then
+            chkconfig ${init_name} off
+            chkconfig --del ${init_name}
+        elif [ "$PM" = "apt" ]; then
+            update-rc.d -f ${init_name} remove
+        fi
     fi
 }
 
 Check_Mirror()
 {
-    if [ ! -s /usr/bin/curl ]; then
+    if ! command -v curl >/dev/null 2>&1; then
         if [ "$PM" = "yum" ]; then
             yum install -y curl
         elif [ "$PM" = "apt" ]; then
@@ -592,6 +655,28 @@ Check_Mirror()
                     fi
                 fi
             fi
+        fi
+    fi
+}
+
+Check_CMPT()
+{
+    if [[ "${DBSelect}" = "5" ]]; then
+        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-7]"  || echo "${RHEL_Version}" | grep -Eqi "^[4-7]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+            Echo_Red "MySQL 8.0 please use latest linux distributions!"
+            exit 1
+        fi
+    fi
+    if [[ "${PHPSelect}" == "10" ]]; then
+        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-6]"  || echo "${RHEL_Version}" | grep -Eqi "^[4-6]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+            Echo_Red "PHP 7.4 please use latest linux distributions!"
+            exit 1
+        fi
+    fi
+    if [[ "${PHPSelect}" =~ ^[123456]$ ]]; then
+        if echo "${Ubuntu_Version}" | grep -Eqi "^19|2[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^10" || echo "${Raspbian_Version}" | grep -Eqi "^10" || echo "${Deepin_Version}" | grep -Eqi "^2[0-9]" || echo "${Fedora_Version}" | grep -Eqi "^29|3[0-9]"; then
+            Echo_Red "Install lower than PHP 7.1 is not supported on very new linux versions such as Ubuntu 19+, Debian 10, Deepin 20+, Fedora 29+ etc."
+            exit 1
         fi
     fi
 }
@@ -698,5 +783,25 @@ TempMycnf_Clean()
     fi
     if [ -s /tmp/.mysql.tmp ]; then
         rm -f /tmp/.mysql.tmp
+    fi
+}
+
+StartOrStop()
+{
+    local action=$1
+    local service=$2
+    if [ "${isWSL}" = "n" ] && command -v systemctl >/dev/null 2>&1 && [[ -s /etc/systemd/system/${service}.service ]]; then
+        systemctl ${action} ${service}.service
+    else
+        /etc/init.d/${service} ${action}
+    fi
+}
+
+Check_WSL() {
+    if [[ "$(< /proc/sys/kernel/osrelease)" == *[Mm]icrosoft* ]]; then
+        echo "running on WSL"
+        isWSL="y"
+    else
+        isWSL="n"
     fi
 }
